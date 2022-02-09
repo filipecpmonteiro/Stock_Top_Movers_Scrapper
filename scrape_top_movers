@@ -1,0 +1,35 @@
+scrape_top_movers <- function(min_gain){
+  #
+  forecasts <- read_html("https://www.tradingview.com/markets/stocks-usa/market-movers-gainers/") 
+  #
+  scrapping <- forecasts %>%
+    html_nodes("td") %>%
+    html_text()
+  scrapping <- as.data.frame(scrapping)
+  #
+  scrape_gains = as.data.frame(scrapping[scrapping$scrapping %like% "%", ])
+  remover <- function (x) {gsub("%", "", x)}
+  scrape_gains <- apply(scrape_gains, 1, remover)
+  scrape_gains = as.numeric(scrape_gains)
+  scrape_gains = sum(scrape_gains > min_gain*100)
+  #
+  scrape_tickers = as.data.frame(scrapping[scrapping$scrapping %like% "\n", ])
+  extractor <- function(x) {
+    if (nrow(as.data.frame(gregexpr(pattern = "\n", x))) == 6) {
+      gsub('\n|\t', '', substr(x, 1, as.numeric(as.data.frame(gregexpr(pattern = as.character(as.data.frame(str_match_all(x,"[A-Z]"))[1,1]), x))[1,1]+8)))
+    } else if (nrow(as.data.frame(gregexpr(pattern = "\n", x))) == 7){
+      sub('.', '', gsub('\n|\t', '', substr(x, 1, as.numeric(as.data.frame(gregexpr(pattern = as.character(as.data.frame(str_match_all(x,"[A-Z]"))[2,1]), x))[1,1]+9+8))))
+    } else {
+      print("ERROR")
+    }
+  }
+  #
+  scrape_tickers <- apply(scrape_tickers, 1, extractor)
+  scrape_tickers = as.data.frame(scrape_tickers)
+  scrape_tickers <- scrape_tickers[1:scrape_gains, ]
+  scrape_tickers = as.data.frame(scrape_tickers, stringsAsFactors=FALSE)
+  colnames(scrape_tickers)[1] = "tickers"
+  scrape_tickers <- data.frame(lapply(scrape_tickers, as.character), stringsAsFactors=FALSE)
+  #
+  return(scrape_tickers)
+}
